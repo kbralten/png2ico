@@ -2,6 +2,7 @@ name: Build and attach release assets
 
 permissions:
   contents: write
+  packages: write
 
 on:
   release:
