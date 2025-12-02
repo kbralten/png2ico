@@ -1,5 +1,8 @@
 name: Build and attach release assets
 
+permissions:
+  contents: write
+
 on:
   release:
     types: [published]
@@ -45,12 +48,12 @@ jobs:
           }
 
           if (Test-Path Installer\Png2Ico.msi) {
-            $msiZip = "artifacts/Png2Ico-${{ github.ref_name }}-installer.zip"
-            Compress-Archive -Path Installer\Png2Ico.msi -DestinationPath $msiZip -Force
-            echo "msi_zip=$msiZip" >> $env:GITHUB_OUTPUT
+            # Upload the raw MSI (do not zip) so it can be submitted to package repositories
+            $msiPath = "Installer\Png2Ico.msi"
+            echo "msi_path=$msiPath" >> $env:GITHUB_OUTPUT
             echo "msi_exists=true" >> $env:GITHUB_OUTPUT
           } else {
-            echo "msi_zip=" >> $env:GITHUB_OUTPUT
+            echo "msi_path=" >> $env:GITHUB_OUTPUT
             echo "msi_exists=false" >> $env:GITHUB_OUTPUT
           }
 
@@ -68,6 +71,6 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.build.outputs.msi_zip }}
-          asset_name: Png2Ico-${{ github.ref_name }}-installer.zip
-          asset_content_type: application/zip
+          asset_path: ${{ steps.build.outputs.msi_path }}
+          asset_name: Png2Ico-${{ github.ref_name }}-installer.msi
+          asset_content_type: application/x-msi
