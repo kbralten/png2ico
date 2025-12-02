@@ -1,0 +1,73 @@
+name: Build and attach release assets
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-attach:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Ensure dotnet tools path is available
+        shell: pwsh
+        run: |
+          echo "Adding dotnet tools to PATH"
+          echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+
+      - name: Install WiX (optional, for MSI)
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix || Write-Host "wix already installed or install failed"
+
+      - name: Run build script and prepare artifacts
+        id: build
+        shell: pwsh
+        run: |
+          # Run the repository build script which produces `dist\Png2Ico.exe` and optionally `Installer\Png2Ico.msi`
+          & .\build.ps1
+
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+
+          if (Test-Path dist\Png2Ico.exe) {
+            $exeZip = "artifacts/Png2Ico-${{ github.ref_name }}-win-x64.zip"
+            Compress-Archive -Path dist\* -DestinationPath $exeZip -Force
+            echo "exe_zip=$exeZip" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "exe_zip=" >> $env:GITHUB_OUTPUT
+          }
+
+          if (Test-Path Installer\Png2Ico.msi) {
+            $msiZip = "artifacts/Png2Ico-${{ github.ref_name }}-installer.zip"
+            Compress-Archive -Path Installer\Png2Ico.msi -DestinationPath $msiZip -Force
+            echo "msi_zip=$msiZip" >> $env:GITHUB_OUTPUT
+            echo "msi_exists=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "msi_zip=" >> $env:GITHUB_OUTPUT
+            echo "msi_exists=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Upload EXE release asset
+        if: ${{ steps.build.outputs.exe_zip != '' }}
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ steps.build.outputs.exe_zip }}
+          asset_name: Png2Ico-${{ github.ref_name }}-win-x64.zip
+          asset_content_type: application/zip
+
+      - name: Upload MSI release asset
+        if: ${{ steps.build.outputs.msi_exists == 'true' }}
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ steps.build.outputs.msi_zip }}
+          asset_name: Png2Ico-${{ github.ref_name }}-installer.zip
+          asset_content_type: application/zip
