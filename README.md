@@ -10,6 +10,11 @@ Quick overview
 
 Download
 - Download the prebuilt executable or installer from this repository's **Releases** page.
+- Install via WinGet:
+
+```powershell
+winget.exe install --id "KevinBralten.Png2Ico"
+```
 
 Requirements
 - On Windows: the published `Png2Ico.exe` requires the .NET 9 runtime (not the SDK).
